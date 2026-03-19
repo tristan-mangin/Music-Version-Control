@@ -1,0 +1,13 @@
+C++ Notes
+
+    uint8_t         --> - unsigned integer type that is exactly 8 bits wide
+    <filesystem>    --> - provides portable way to interact with file systems and perform operations on files and directories
+                        - able to handle differences in operating systems
+
+TODO LIST:
+    - hasher.cpp/h
+    - utils.cpp/h
+    - object_store.cpp/h
+    - commit.cpp/h
+    - index.cpp/h
+    - repository.cpp/h

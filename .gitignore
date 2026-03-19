@@ -1,0 +1,12 @@
+# Cmake build output
+build/
+
+# Compiled binaries
+*.o
+*.a
+*.exe
+
+# IDE / editor folders 
+.vscode/
+.idea/
+*.user
