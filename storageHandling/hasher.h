@@ -11,7 +11,7 @@
 #include <string>
 #include <filesystem>
 
-std::string hashFile(std::filesystem::path& filePath);
+std::string hashFile(const std::filesystem::path& filePath);
 std::string hashBytes(const unsigned char* buffer, size_t size);
 
 #endif // HASHER_H

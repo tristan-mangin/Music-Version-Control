@@ -10,11 +10,26 @@
 #include <fstream>
 
 /**
+ * Helper function to convert a byte array hash to a hex string
+ * @param hash The byte array containing the hash (32 bytes for SHA-256)
+ * @return The hash as a hex string
+ */
+std::string toHexString(const unsigned char *hash)
+{
+    std::stringstream ss;
+    for (int i = 0; i < SHA256_DIGEST_LENGTH; ++i)
+    {
+        ss << std::hex << std::setw(2) << std::setfill('0') << (int)hash[i];
+    }
+    return ss.str();
+}
+
+/**
  * Hashes the contents of a file and returns the hash as a hex string.
  * @param filePath The path to the file to hash.
  * @return The SHA-256 hash of the file's contents as a hex string.
  */
-std::string hashFile(std::filesystem::path &filePath)
+std::string hashFile(const std::filesystem::path &filePath)
 {
     // Open the file in binary mode so bytes are read correctly
     std::ifstream file(filePath, std::ios::binary);
@@ -44,13 +59,8 @@ std::string hashFile(std::filesystem::path &filePath)
     unsigned char hash[SHA256_DIGEST_LENGTH];
     SHA256_Final(hash, &sha256);
 
-    // append 2-digit hex for each byte in the hash to a stringstream and return it as a string
-    std::stringstream ss;
-    for (int i = 0; i < SHA256_DIGEST_LENGTH; ++i)
-    {
-        ss << std::hex << std::setw(2) << std::setfill('0') << (int)hash[i];
-    }
-    return ss.str();
+    // Convert the hash bytes to a hex string and return it
+    return toHexString(hash);
 }
 
 /**
@@ -59,7 +69,8 @@ std::string hashFile(std::filesystem::path &filePath)
  * @param size The size of the byte buffer.
  * @return The SHA-256 hash of the buffer as a hex string.
  */
-std::string hashBytes(const unsigned char *buffer, size_t size) {
+std::string hashBytes(const unsigned char *buffer, size_t size)
+{
     // Create and initialize the SHA-256 context for hashing
     SHA256_CTX sha256;
     SHA256_Init(&sha256);
@@ -71,11 +82,6 @@ std::string hashBytes(const unsigned char *buffer, size_t size) {
     unsigned char hash[SHA256_DIGEST_LENGTH];
     SHA256_Final(hash, &sha256);
 
-    // Convert the hash bytes to a hex string
-    std::stringstream ss;
-    for (int i = 0; i < SHA256_DIGEST_LENGTH; ++i)
-    {
-        ss << std::hex << std::setw(2) << std::setfill('0') << (int)hash[i];
-    }
-    return ss.str();
+    // Convert the hash bytes to a hex string and return it
+    return toHexString(hash);
 }
