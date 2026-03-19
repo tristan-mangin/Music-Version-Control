@@ -9,8 +9,9 @@
 #define HASHER_H
 
 #include <string>
+#include <filesystem>
 
-std::string hashFile(const std::string& filePath);
+std::string hashFile(std::filesystem::path& filePath);
 std::string hashBytes(const unsigned char* buffer, size_t size);
 
 #endif // HASHER_H
