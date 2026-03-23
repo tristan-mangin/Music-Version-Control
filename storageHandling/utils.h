@@ -18,5 +18,6 @@ std::vector<unsigned char> readFileBinary(const std::filesystem::path &filePath)
 void writeFileAtomic(const std::filesystem::path &filePath, const std::vector<unsigned char> &data);
 std::string formatTimestamp(std::time_t timestamp);
 std::vector<unsigned char> hexToBytes(const std::string &hex);
+std::string toHexString(const unsigned char *data, size_t length);
 
 #endif // UTILS_H

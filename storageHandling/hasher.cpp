@@ -6,23 +6,9 @@
 // hashBytes(buffer, size) -> string
 
 #include "hasher.h"
-#include <openssl/sha.h>
+#include "utils.h"
 #include <fstream>
-
-/**
- * Helper function to convert a byte array hash to a hex string
- * @param hash The byte array containing the hash (32 bytes for SHA-256)
- * @return The hash as a hex string
- */
-std::string toHexString(const unsigned char *hash)
-{
-    std::stringstream ss;
-    for (int i = 0; i < SHA256_DIGEST_LENGTH; ++i)
-    {
-        ss << std::hex << std::setw(2) << std::setfill('0') << (int)hash[i];
-    }
-    return ss.str();
-}
+#include <openssl/sha.h>
 
 /**
  * Hashes the contents of a file and returns the hash as a hex string.
@@ -60,7 +46,7 @@ std::string hashFile(const std::filesystem::path &filePath)
     SHA256_Final(hash, &sha256);
 
     // Convert the hash bytes to a hex string and return it
-    return toHexString(hash);
+    return toHexString(hash, SHA256_DIGEST_LENGTH);
 }
 
 /**
@@ -83,5 +69,5 @@ std::string hashBytes(const unsigned char *buffer, size_t size)
     SHA256_Final(hash, &sha256);
 
     // Convert the hash bytes to a hex string and return it
-    return toHexString(hash);
+    return toHexString(hash, SHA256_DIGEST_LENGTH);
 }

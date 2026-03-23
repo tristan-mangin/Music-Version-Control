@@ -9,6 +9,7 @@
 
 #include "utils.h"
 #include <fstream>
+#include <openssl/sha.h>
 
 /**
  * Reads the entire contents of a file into a vector of bytes.
@@ -44,11 +45,11 @@ void writeFileAtomic(const std::filesystem::path &filePath, const std::vector<un
 
     // Write data to the temporary file
     std::ofstream tempFile(tempFilePath, std::ios::binary);
+    tempFile.write(reinterpret_cast<const char *>(data.data()), data.size());
     if (!tempFile)
     {
         throw std::runtime_error("Could not open temporary file for writing: " + tempFilePath.string());
     }
-    tempFile.write(reinterpret_cast<const char *>(data.data()), data.size());
     tempFile.close();
 
     // Atomically rename the temporary file to the target file
@@ -62,9 +63,14 @@ void writeFileAtomic(const std::filesystem::path &filePath, const std::vector<un
  */
 std::string formatTimestamp(std::time_t timestamp)
 {
-    std::tm *tm = std::localtime(&timestamp);
+    std::tm tm{};
+#ifdef _WIN32
+    localtime_s(&tm, &timestamp);
+#else
+    localtime_r(&timestamp, &tm);
+#endif
     char buffer[20];
-    std::strftime(buffer, sizeof(buffer), "%Y-%m-%d %H:%M:%S", tm);
+    std::strftime(buffer, sizeof(buffer), "%Y-%m-%d %H:%M:%S", &tm);
     return std::string(buffer);
 }
 
@@ -84,8 +90,27 @@ std::vector<unsigned char> hexToBytes(const std::string &hex)
     bytes.reserve(hex.length() / 2);
     for (size_t i = 0; i < hex.length(); i += 2)
     {
-        unsigned char byte = std::stoul(hex.substr(i, 2), nullptr, 16);
+        if (!std::isxdigit(hex[i] || !std::isxdigit(hex[i + 1])))
+        {
+            throw std::runtime_error("Invalid hex string: contains non-hex characters");
+        }
+        unsigned char byte = static_cast<unsigned char>(std::stoi(hex.substr(i, 2), nullptr, 16));
         bytes.push_back(byte);
     }
     return bytes;
+}
+
+/**
+ * Helper function to convert a byte array hash to a hex string
+ * @param hash The byte array containing the hash (32 bytes for SHA-256)
+ * @return The hash as a hex string
+ */
+std::string toHexString(const unsigned char *hash, size_t length)
+{
+    std::stringstream ss;
+    for (int i = 0; i < length; ++i)
+    {
+        ss << std::hex << std::setw(2) << std::setfill('0') << (int)hash[i];
+    }
+    return ss.str();
 }
