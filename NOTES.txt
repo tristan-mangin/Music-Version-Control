@@ -7,7 +7,7 @@ C++ Notes
 TODO LIST:
     - hasher.cpp/h              *
     - utils.cpp/h               *
-    - object_store.cpp/h
+    - object_store.cpp/h        *
     - commit.cpp/h
     - index.cpp/h
     - repository.cpp/h
