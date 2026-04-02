@@ -5,3 +5,11 @@
 // getStagedHash() -> string
 // clear()
 // hasStaged() -> bool
+
+#include "hasher.h"
+#include "utils.h"
+
+void stage(const std::filesystem::path &repoRoot, const std::string &hash);
+std::string getStagedHash(const std::filesystem::path &repoRoot);
+void clearStage(const std::filesystem::path &repoRoot);
+bool hasStaged(const std::filesystem::path &repoRoot);
