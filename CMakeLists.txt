@@ -47,7 +47,7 @@ function(add_bvcs_test test_name)
         tests/${test_name}.cpp
         ${BVCS_SOURCES}
     )
-    target_include_directories(${test_name} PRIVATE src)
+    target_include_directories(${test_name} PRIVATE storageHandling)
     target_link_libraries(${test_name} PRIVATE OpenSSL::Crypto)
     add_test(NAME ${test_name} COMMAND ${test_name})
 endfunction()
@@ -56,3 +56,4 @@ add_bvcs_test(test_hasher)
 add_bvcs_test(test_utils)
 add_bvcs_test(test_object_store)
 add_bvcs_test(test_commit)
+add_bvcs_test(test_index) 

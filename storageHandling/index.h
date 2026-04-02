@@ -11,5 +11,5 @@
 
 void stage(const std::filesystem::path &repoRoot, const std::string &hash);
 std::string getStagedHash(const std::filesystem::path &repoRoot);
-void clearStage(const std::filesystem::path &repoRoot);
+void clear(const std::filesystem::path &repoRoot);
 bool hasStaged(const std::filesystem::path &repoRoot);

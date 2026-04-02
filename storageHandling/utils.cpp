@@ -39,6 +39,8 @@ std::vector<unsigned char> readFileBinary(const std::filesystem::path &filePath)
  */
 void writeFileAtomic(const std::filesystem::path &filePath, const std::vector<unsigned char> &data)
 {
+    std::filesystem::create_directories(filePath.parent_path());
+
     // Create a temporary file path in the same directory as the target file
     std::filesystem::path tempFilePath = filePath;
     tempFilePath += ".tmp";
