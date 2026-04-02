@@ -5,6 +5,8 @@
 // getStagedHash() -> string
 // clear()
 // hasStaged() -> bool
+#ifndef INDEX_H
+#define INDEX_H
 
 #include "hasher.h"
 #include "utils.h"
@@ -13,3 +15,5 @@ void stage(const std::filesystem::path &repoRoot, const std::string &hash);
 std::string getStagedHash(const std::filesystem::path &repoRoot);
 void clear(const std::filesystem::path &repoRoot);
 bool hasStaged(const std::filesystem::path &repoRoot);
+
+#endif // INDEX_H
