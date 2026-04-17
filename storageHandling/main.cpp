@@ -49,6 +49,7 @@ int handleCheckout(const std::filesystem::path &repoRoot, const std::string &has
 
 int main(int argc, char *argv[])
 {
+    // Require at least one argument (the command)
     if (argc < 2)
     {
         printUsage();
@@ -57,24 +58,44 @@ int main(int argc, char *argv[])
 
     std::string command = argv[1];
 
-    // init doesn't require existing repoRoot
+    if (command == "help" || command == "--help" || command == "-h")
+    {
+        if (argc >= 3)
+            printHelp(argv[2]);
+        else
+            printUsage();
+        return 0;
+    }
+
+    if (command != "init" && command != "add" && command != "commit" &&
+        command != "log" && command != "checkout")
+    {
+        std::cerr << "Unknown command: " << command << "\n";
+        printUsage();
+        return 1;
+    }
+
+    // init is special — it doesn't need an existing repo root
     if (command == "init")
     {
         return handleInit(std::filesystem::current_path());
     }
 
-    // all other commands require finding the repoRoot first
+    // All other commands need to find the repo root first
+    // This lets you run bvcs commands from subdirectories, just like git
     std::filesystem::path repoRoot;
     try
     {
         repoRoot = findRepoRoot();
     }
-    catch (const std::exception &e)
+    catch (const std::runtime_error &e)
     {
         std::cerr << "Error: " << e.what() << "\n";
         return 1;
     }
 
+    // Wrap all command dispatch in a try/catch so any runtime error
+    // from the repository layer prints cleanly rather than crashing
     try
     {
         if (command == "add")
@@ -88,6 +109,8 @@ int main(int argc, char *argv[])
         }
         else if (command == "commit")
         {
+            // Support both: bvcs commit -m "message"
+            //          and: bvcs commit "message"
             if (argc == 4 && std::string(argv[2]) == "-m")
             {
                 return handleCommit(repoRoot, argv[3]);
@@ -115,32 +138,12 @@ int main(int argc, char *argv[])
             }
             return handleCheckout(repoRoot, argv[2], argv[3]);
         }
-        else if (command == "help" || command == "--help" || command == "-h")
-        {
-            if (argc >= 3)
-            {
-                printHelp(argv[2]);
-            }
-            else
-            {
-                printUsage();
-            }
-            return 0;
-        }
-        else
-        {
-            std::cerr << "Unknown command: " << command << "\n";
-            printUsage();
-            return 1;
-        }
     }
-    catch (const std::exception &e)
+    catch (const std::runtime_error &e)
     {
         std::cerr << "Error: " << e.what() << "\n";
         return 1;
     }
-
-    return 0;
 }
 
 // Helpers

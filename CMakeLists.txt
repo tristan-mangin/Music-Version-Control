@@ -58,3 +58,12 @@ add_bvcs_test(test_object_store)
 add_bvcs_test(test_commit)
 add_bvcs_test(test_index) 
 add_bvcs_test(test_repository)
+
+add_executable(test_main tests/test_main.cpp)
+target_include_directories(test_main PRIVATE src)
+
+# Pass the path to the bvcs binary automatically at test time
+add_test(
+    NAME test_main
+    COMMAND test_main $<TARGET_FILE:bvcs>
+)
