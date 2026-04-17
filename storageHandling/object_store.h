@@ -16,6 +16,7 @@
 #include <filesystem>
 
 std::string storeFromFile(const std::filesystem::path &repoRoot, const std::filesystem::path &filePath);
+std::string storeFromMemory(const std::filesystem::path &repoRoot, const std::vector<unsigned char> &data);
 void retrieveToFile(const std::filesystem::path &repoRoot, const std::string &hash, const std::filesystem::path &filePath);
 bool exists(const std::filesystem::path &repoRoot, const std::string &hash);
 std::filesystem::path objectPath(const std::filesystem::path &repoRoot, const std::string &hash);

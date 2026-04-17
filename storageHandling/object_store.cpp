@@ -42,6 +42,27 @@ std::string storeFromFile(const std::filesystem::path &repoRoot, const std::file
     return hash;
 }
 
+std::string storeFromMemory(const std::filesystem::path &repoRoot,
+                            const std::vector<unsigned char> &data)
+{
+    std::string hash = hashBytes(data.data(), data.size());
+    std::filesystem::path destPath = objectPath(repoRoot, hash);
+    if (!std::filesystem::exists(destPath))
+    {
+        std::filesystem::create_directories(destPath.parent_path());
+        try
+        {
+            writeFileAtomic(destPath, data);
+        }
+        catch (...)
+        {
+            std::filesystem::remove(destPath);
+            throw;
+        }
+    }
+    return hash;
+}
+
 /**
  * Retrieves the contents of an object identified by its hash and writes it to a file.
  * @param hash The hash of the object to retrieve.
