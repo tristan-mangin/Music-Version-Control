@@ -1,0 +1,1 @@
+/usr/bin/c++ --coverage CMakeFiles/test_main.dir/tests/test_main.cpp.o -o test_main 

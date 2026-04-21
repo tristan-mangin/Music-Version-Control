@@ -5,7 +5,7 @@
 #include <fstream>
 #include "../storageHandling/repository.h"
 
-// helpers 
+// helpers
 
 int passed = 0;
 int failed = 0;
@@ -56,7 +56,7 @@ struct TempRepo
 
     // Writes a file with raw binary contents
     std::filesystem::path makeBinaryFile(const std::string &name,
-                                          const std::vector<unsigned char> &contents)
+                                         const std::vector<unsigned char> &contents)
     {
         std::filesystem::path path = root / name;
         std::ofstream out(path, std::ios::binary);
@@ -69,11 +69,11 @@ struct TempRepo
     {
         std::ifstream in(path, std::ios::binary);
         return std::string((std::istreambuf_iterator<char>(in)),
-                            std::istreambuf_iterator<char>());
+                           std::istreambuf_iterator<char>());
     }
 };
 
-// init 
+// init
 
 void test_init_createsBvcsDirectory()
 {
@@ -112,8 +112,14 @@ void test_init_throwsIfAlreadyInitialized()
     TempRepo t;
     t.repo.init();
     bool threw = false;
-    try { t.repo.init(); }
-    catch (const std::runtime_error &) { threw = true; }
+    try
+    {
+        t.repo.init();
+    }
+    catch (const std::runtime_error &)
+    {
+        threw = true;
+    }
     check("init: throws if repository already exists", threw);
 }
 
@@ -132,8 +138,14 @@ void test_add_throwsIfNotInitialized()
     TempRepo t;
     auto file = t.makeFile("test.wav", "audio data");
     bool threw = false;
-    try { t.repo.add(file); }
-    catch (const std::runtime_error &) { threw = true; }
+    try
+    {
+        t.repo.add(file);
+    }
+    catch (const std::runtime_error &)
+    {
+        threw = true;
+    }
     check("add: throws if repo is not initialized", threw);
 }
 
@@ -142,8 +154,14 @@ void test_add_throwsIfFileDoesNotExist()
     TempRepo t;
     t.repo.init();
     bool threw = false;
-    try { t.repo.add(t.root / "nonexistent.wav"); }
-    catch (const std::runtime_error &) { threw = true; }
+    try
+    {
+        t.repo.add(t.root / "nonexistent.wav");
+    }
+    catch (const std::runtime_error &)
+    {
+        threw = true;
+    }
     check("add: throws if file does not exist", threw);
 }
 
@@ -201,14 +219,41 @@ void test_add_addingDifferentFilesProducesDifferentHashes()
     check("add: different files produce different staged hashes", hashA != hashB);
 }
 
-// commit 
+void test_add_refusesFileMatchingBvcsIgnore()
+{
+    TempRepo t;
+    t.repo.init();
+    t.makeFile(".bvcsignore", "*.tmp\n");
+    auto file = t.makeFile("scratch.tmp", "temporary data");
+
+    bool threw = false;
+    try
+    {
+        t.repo.add(file);
+    }
+    catch (const std::runtime_error &e)
+    {
+        threw = std::string(e.what()).find("ignored") != std::string::npos;
+    }
+
+    check("add: refuses files matching .bvcsignore", threw);
+    check("add: ignored file is not staged", !hasStaged(t.root));
+}
+
+// commit
 
 void test_commit_throwsIfNotInitialized()
 {
     TempRepo t;
     bool threw = false;
-    try { t.repo.commit("initial commit"); }
-    catch (const std::runtime_error &) { threw = true; }
+    try
+    {
+        t.repo.commit("initial commit");
+    }
+    catch (const std::runtime_error &)
+    {
+        threw = true;
+    }
     check("commit: throws if repo is not initialized", threw);
 }
 
@@ -217,8 +262,14 @@ void test_commit_throwsIfNothingStaged()
     TempRepo t;
     t.repo.init();
     bool threw = false;
-    try { t.repo.commit("initial commit"); }
-    catch (const std::runtime_error &) { threw = true; }
+    try
+    {
+        t.repo.commit("initial commit");
+    }
+    catch (const std::runtime_error &)
+    {
+        threw = true;
+    }
     check("commit: throws if nothing is staged", threw);
 }
 
@@ -229,8 +280,14 @@ void test_commit_throwsOnEmptyMessage()
     auto file = t.makeFile("test.wav", "audio data");
     t.repo.add(file);
     bool threw = false;
-    try { t.repo.commit(""); }
-    catch (const std::runtime_error &) { threw = true; }
+    try
+    {
+        t.repo.commit("");
+    }
+    catch (const std::runtime_error &)
+    {
+        threw = true;
+    }
     check("commit: throws on empty message", threw);
 }
 
@@ -288,14 +345,20 @@ void test_commit_commitObjectStoredInObjectStore()
     check("commit: commit object exists in object store", exists(t.root, hash));
 }
 
-// log 
+// log
 
 void test_log_throwsIfNotInitialized()
 {
     TempRepo t;
     bool threw = false;
-    try { t.repo.log(); }
-    catch (const std::runtime_error &) { threw = true; }
+    try
+    {
+        t.repo.log();
+    }
+    catch (const std::runtime_error &)
+    {
+        threw = true;
+    }
     check("log: throws if repo is not initialized", threw);
 }
 
@@ -304,8 +367,14 @@ void test_log_doesNotThrowOnEmptyRepo()
     TempRepo t;
     t.repo.init();
     bool threw = false;
-    try { t.repo.log(); }
-    catch (...) { threw = true; }
+    try
+    {
+        t.repo.log();
+    }
+    catch (...)
+    {
+        threw = true;
+    }
     check("log: does not throw on repo with no commits", !threw);
 }
 
@@ -318,19 +387,31 @@ void test_log_doesNotThrowWithCommits()
     t.repo.commit("initial commit");
 
     bool threw = false;
-    try { t.repo.log(); }
-    catch (...) { threw = true; }
+    try
+    {
+        t.repo.log();
+    }
+    catch (...)
+    {
+        threw = true;
+    }
     check("log: does not throw with commits present", !threw);
 }
 
-// checkout 
+// checkout
 
 void test_checkout_throwsIfNotInitialized()
 {
     TempRepo t;
     bool threw = false;
-    try { t.repo.checkout("abc123", t.root / "output.wav"); }
-    catch (const std::runtime_error &) { threw = true; }
+    try
+    {
+        t.repo.checkout("abc123", t.root / "output.wav");
+    }
+    catch (const std::runtime_error &)
+    {
+        threw = true;
+    }
     check("checkout: throws if repo is not initialized", threw);
 }
 
@@ -340,8 +421,14 @@ void test_checkout_throwsOnUnknownHash()
     t.repo.init();
     bool threw = false;
     std::string fakeHash = "abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890";
-    try { t.repo.checkout(fakeHash, t.root / "output.wav"); }
-    catch (const std::runtime_error &) { threw = true; }
+    try
+    {
+        t.repo.checkout(fakeHash, t.root / "output.wav");
+    }
+    catch (const std::runtime_error &)
+    {
+        threw = true;
+    }
     check("checkout: throws on unknown hash", threw);
 }
 
@@ -368,8 +455,7 @@ void test_checkout_restoresBinaryFileContents()
     t.repo.init();
     // Simulate WAV header bytes
     std::vector<unsigned char> wavContents = {
-        0x52, 0x49, 0x46, 0x46, 0x00, 0xFF, 0x80, 0x01
-    };
+        0x52, 0x49, 0x46, 0x46, 0x00, 0xFF, 0x80, 0x01};
     auto file = t.makeBinaryFile("test.wav", wavContents);
     t.repo.add(file);
     t.repo.commit("binary commit");
@@ -381,8 +467,7 @@ void test_checkout_restoresBinaryFileContents()
     std::ifstream in(outputPath, std::ios::binary);
     std::vector<unsigned char> restored(
         (std::istreambuf_iterator<char>(in)),
-        std::istreambuf_iterator<char>()
-    );
+        std::istreambuf_iterator<char>());
     check("checkout: binary file contents are restored exactly",
           restored == wavContents);
 }
@@ -411,7 +496,7 @@ void test_checkout_canRetrieveEarlierVersion()
           t.readFile(outputPath) == "version one audio");
 }
 
-// full workflow 
+// full workflow
 
 void test_fullWorkflow_initAddCommitCheckout()
 {
@@ -439,8 +524,7 @@ void test_fullWorkflow_multipleVersionsAllRetrievable()
     std::vector<std::string> versions = {
         "first recording take",
         "second recording take",
-        "third recording take"
-    };
+        "third recording take"};
     std::vector<std::string> hashes;
 
     // Commit all three versions
@@ -467,7 +551,7 @@ void test_fullWorkflow_multipleVersionsAllRetrievable()
           allCorrect);
 }
 
-// main 
+// main
 
 int main()
 {
@@ -486,6 +570,7 @@ int main()
     test_add_storesBlob();
     test_add_addingSameFileTwiceDeduplicates();
     test_add_addingDifferentFilesProducesDifferentHashes();
+    test_add_refusesFileMatchingBvcsIgnore();
 
     test_commit_throwsIfNotInitialized();
     test_commit_throwsIfNothingStaged();
@@ -508,6 +593,7 @@ int main()
     test_fullWorkflow_initAddCommitCheckout();
     test_fullWorkflow_multipleVersionsAllRetrievable();
 
-    std::cout << "\n" << passed << " passed, " << failed << " failed\n";
+    std::cout << "\n"
+              << passed << " passed, " << failed << " failed\n";
     return failed > 0 ? 1 : 0;
 }

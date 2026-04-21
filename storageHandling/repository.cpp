@@ -16,6 +16,232 @@
 #include <iostream>
 #include <stdexcept>
 #include <ctime>
+#include <vector>
+#include <fstream>
+#include <regex>
+
+// Helper functions for .bvcsignore parsing and matching.
+namespace
+{
+    /**
+     * Trims leading and trailing whitespace from a string.
+     * @param s The string to trim.
+     * @return A new string with leading and trailing whitespace removed.
+     */
+    std::string trim(const std::string &s)
+    {
+        const std::string whitespace = " \t\r\n";
+        const size_t start = s.find_first_not_of(whitespace);
+        if (start == std::string::npos)
+        {
+            return "";
+        }
+        const size_t end = s.find_last_not_of(whitespace);
+        return s.substr(start, end - start + 1);
+    }
+
+    /**
+     * Converts a glob pattern (with * and ?) to a regular expression string.
+     * @param pattern The glob pattern to convert.
+     * @return A string representing the equivalent regular expression.
+     */
+    std::string globToRegex(const std::string &pattern)
+    {
+        std::string regexPattern = "^";
+        for (char c : pattern)
+        {
+            switch (c)
+            {
+            case '*':
+                regexPattern += ".*";
+                break;
+            case '?':
+                regexPattern += ".";
+                break;
+            case '.':
+            case '+':
+            case '(':
+            case ')':
+            case '[':
+            case ']':
+            case '{':
+            case '}':
+            case '^':
+            case '$':
+            case '|':
+            case '\\':
+                regexPattern += "\\";
+                regexPattern += c;
+                break;
+            default:
+                regexPattern += c;
+                break;
+            }
+        }
+        regexPattern += "$";
+        return regexPattern;
+    }
+
+    /**
+     * Matches a text string against a glob pattern. The pattern can include * and ? wildcards.
+     * @param pattern The glob pattern to match against (e.g., "*.tmp").
+     * @param text The text string to test (e.g., "scratch.tmp").
+     * @return True if the text matches the pattern, false otherwise.
+     */
+    bool wildcardMatch(const std::string &pattern, const std::string &text)
+    {
+        return std::regex_match(text, std::regex(globToRegex(pattern)));
+    }
+
+    /**
+     * Determines if the target path is relative to the base path and returns the relative path if so.
+     * @param base The base path to compare against.
+     * @param target The target path to test.
+     * @param relativeOut Output parameter that will contain the relative path if the target is relative to the base.
+     * @return True if the target is relative to the base, false otherwise
+     */
+    bool isRelativeTo(const std::filesystem::path &base, const std::filesystem::path &target, std::string &relativeOut)
+    {
+        std::error_code ec;
+        std::filesystem::path rel = std::filesystem::relative(target, base, ec);
+        if (ec)
+        {
+            return false;
+        }
+
+        std::string relStr = rel.generic_string();
+        if (relStr.empty() || relStr == ".")
+        {
+            relativeOut = relStr;
+            return true;
+        }
+
+        if (relStr == ".." || relStr.rfind("../", 0) == 0)
+        {
+            return false;
+        }
+
+        relativeOut = relStr;
+        return true;
+    }
+
+    /**
+     * Determines if a given pattern matches a relative path according to .gitignore-like rules. Supports
+     * patterns that match file/dir names at any level, as well as anchored patterns with slashes.
+     * @param pattern The ignore pattern to match (e.g., "*.tmp", "build/", "docs/*.log").
+     * @param relativePath The path to test, relative to the repository root (e.g., "scratch.tmp",
+     * "build/output.o", "docs/errors.log").
+     * @return True if the pattern matches the relative path, false otherwise.
+     */
+    bool patternMatchesPath(const std::string &pattern, const std::string &relativePath)
+    {
+        std::filesystem::path relPath(relativePath);
+        std::string fileName = relPath.filename().string();
+
+        if (!pattern.empty() && pattern.back() == '/')
+        {
+            std::string dirPattern = pattern.substr(0, pattern.size() - 1);
+            if (dirPattern.empty())
+            {
+                return false;
+            }
+            return relativePath == dirPattern || relativePath.rfind(dirPattern + "/", 0) == 0;
+        }
+
+        // Match anchored-ish paths when a slash is present.
+        if (pattern.find('/') != std::string::npos)
+        {
+            return wildcardMatch(pattern, relativePath);
+        }
+
+        // Gitignore-like behavior: pattern without slash matches file/dir names at any level.
+        if (wildcardMatch(pattern, fileName))
+        {
+            return true;
+        }
+
+        for (const auto &part : relPath)
+        {
+            if (wildcardMatch(pattern, part.string()))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * Determines if a given file path should be ignored based on the patterns in .bvcsignore. The file path 
+     * should be an absolute path; the function will compute its path relative to the repo root and match against
+     * the ignore patterns.
+     * @param repoRoot The root directory of the repository.
+     * @param filePath The file path to test.
+     * @return True if the file should be ignored, false otherwise.
+     */
+    bool isIgnoredByBvcsIgnore(const std::filesystem::path &repoRoot, const std::filesystem::path &filePath)
+    {
+        std::filesystem::path ignoreFile = repoRoot / ".bvcsignore";
+        if (!std::filesystem::exists(ignoreFile))
+        {
+            return false;
+        }
+
+        std::error_code ec;
+        std::filesystem::path absRepo = std::filesystem::weakly_canonical(repoRoot, ec);
+        if (ec)
+        {
+            return false;
+        }
+
+        std::filesystem::path absFile = std::filesystem::weakly_canonical(filePath, ec);
+        if (ec)
+        {
+            return false;
+        }
+
+        std::string relativePath;
+        if (!isRelativeTo(absRepo, absFile, relativePath))
+        {
+            return false;
+        }
+
+        std::ifstream in(ignoreFile);
+        if (!in)
+        {
+            throw std::runtime_error("Failed to open .bvcsignore: " + ignoreFile.string());
+        }
+
+        bool ignored = false;
+        std::string rawLine;
+        while (std::getline(in, rawLine))
+        {
+            std::string pattern = trim(rawLine);
+            if (pattern.empty() || pattern[0] == '#')
+            {
+                continue;
+            }
+
+            bool negate = false;
+            if (pattern[0] == '!')
+            {
+                negate = true;
+                pattern = trim(pattern.substr(1));
+                if (pattern.empty())
+                {
+                    continue;
+                }
+            }
+
+            if (patternMatchesPath(pattern, relativePath))
+            {
+                ignored = !negate;
+            }
+        }
+
+        return ignored;
+    }
+}
 
 /**
  * Constructs a Repository rooted at the given path. Does not initialize anythin on the disk. Need to
@@ -64,8 +290,20 @@ void Repository::add(const std::filesystem::path &filePath)
         throw std::runtime_error("File not found: " + filePath.string());
     }
 
+    if (isIgnoredByBvcsIgnore(m_root, filePath))
+    {
+        throw std::runtime_error("Refusing to add ignored file: " + filePath.string());
+    }
+
     // Store the blob and record its hash in the index
     std::string hash = storeFromFile(m_root, filePath);
+
+    std::string stagedHash = getStagedHash(m_root);
+    if (!stagedHash.empty() && stagedHash != hash)
+    {
+        std::cerr << "warning: replacing previously staged file\n";
+    }
+
     stage(m_root, hash);
 
     std::cout << "Staged " << filePath.filename().string()
@@ -243,13 +481,68 @@ std::string Repository::resolveRef(const std::string &hashOrBranch) const
         throw std::runtime_error("Hash too short to resolve: " + hashOrBranch);
     }
 
-    // Verify the object actually exists before returning
-    if (!exists(m_root, hashOrBranch))
+    // If a full hash is provided and exists, use it directly.
+    if (exists(m_root, hashOrBranch))
+    {
+        return hashOrBranch;
+    }
+
+    // Otherwise resolve it as a hash prefix by scanning the object store.
+    std::vector<std::string> matches;
+    std::filesystem::path objectsRoot = bvcsDir() / "objects";
+    if (std::filesystem::exists(objectsRoot))
+    {
+        for (const auto &dirEntry : std::filesystem::directory_iterator(objectsRoot))
+        {
+            if (!dirEntry.is_directory())
+            {
+                continue;
+            }
+
+            std::string shard = dirEntry.path().filename().string();
+            if (shard.length() != 2)
+            {
+                continue;
+            }
+
+            for (const auto &fileEntry : std::filesystem::directory_iterator(dirEntry.path()))
+            {
+                if (!fileEntry.is_regular_file())
+                {
+                    continue;
+                }
+
+                std::string suffix = fileEntry.path().filename().string();
+                std::string fullHash = shard + suffix;
+                if (fullHash.rfind(hashOrBranch, 0) == 0)
+                {
+                    // Restrict checkout ref resolution to commit-like objects.
+                    try
+                    {
+                        std::vector<unsigned char> data = readFileBinary(fileEntry.path());
+                        (void)deserializeCommit(data);
+                        matches.push_back(fullHash);
+                    }
+                    catch (...)
+                    {
+                        // Not a commit object; ignore for checkout ref resolution.
+                    }
+                }
+            }
+        }
+    }
+
+    if (matches.empty())
     {
         throw std::runtime_error("Could not resolve ref: " + hashOrBranch);
     }
 
-    return hashOrBranch;
+    if (matches.size() > 1)
+    {
+        throw std::runtime_error("Ambiguous ref prefix: " + hashOrBranch);
+    }
+
+    return matches.front();
 }
 
 /**
@@ -273,5 +566,65 @@ void Repository::assertStaged() const
     {
         throw std::runtime_error(
             "Nothing staged. Run 'bvcs add <file>' first.");
+    }
+}
+
+/**
+ * Compares three states: the last committed blob hash, the currently staged hash, and the hash of the file on disk right now
+ */
+void Repository::status(const std::filesystem::path &filePath) const
+{
+    assertInitialized();
+
+    if (!std::filesystem::exists(filePath))
+    {
+        throw std::runtime_error("File not found: " + filePath.string());
+    }
+
+    std::string headCommitHash = headHash();
+    std::string stagedHash = getStagedHash(m_root);
+
+    if (headCommitHash.empty())
+    {
+        std::cout << "No commits yet.\n";
+        return;
+    }
+
+    std::filesystem::path commitPath = objectPath(m_root, headCommitHash);
+    if (!std::filesystem::exists(commitPath))
+    {
+        throw std::runtime_error("HEAD commit object is missing: " + headCommitHash);
+    }
+
+    std::vector<unsigned char> commitData = readFileBinary(commitPath);
+    Commit headCommit = deserializeCommit(commitData);
+    std::string committedBlobHash = headCommit.blobHash;
+
+    std::string workingHash = hashFile(filePath);
+
+    std::cout << "On commit: " << committedBlobHash.substr(0, 8) << "...\n";
+
+    if (!stagedHash.empty())
+    {
+        std::cout << "Staged:    " << stagedHash.substr(0, 8) << "... ";
+        if (committedBlobHash == stagedHash)
+            std::cout << "(unchanged)\n";
+        else
+            std::cout << "(modified)\n";
+    }
+    else
+    {
+        std::cout << "Staged:    " << "(none)\n";
+    }
+
+    std::cout << "Working:   " << workingHash.substr(0, 8) << "... ";
+    std::string workingBaseline = stagedHash.empty() ? committedBlobHash : stagedHash;
+    if (workingHash == workingBaseline)
+    {
+        std::cout << "(unchanged)\n";
+    }
+    else
+    {
+        std::cout << "(modified)\n";
     }
 }

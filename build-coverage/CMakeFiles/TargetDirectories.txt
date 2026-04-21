@@ -1,0 +1,12 @@
+/mnt/c/Code/Music-Version-Control/build-coverage/CMakeFiles/bvcs.dir
+/mnt/c/Code/Music-Version-Control/build-coverage/CMakeFiles/test_hasher.dir
+/mnt/c/Code/Music-Version-Control/build-coverage/CMakeFiles/test_utils.dir
+/mnt/c/Code/Music-Version-Control/build-coverage/CMakeFiles/test_object_store.dir
+/mnt/c/Code/Music-Version-Control/build-coverage/CMakeFiles/test_commit.dir
+/mnt/c/Code/Music-Version-Control/build-coverage/CMakeFiles/test_index.dir
+/mnt/c/Code/Music-Version-Control/build-coverage/CMakeFiles/test_repository.dir
+/mnt/c/Code/Music-Version-Control/build-coverage/CMakeFiles/test_main.dir
+/mnt/c/Code/Music-Version-Control/build-coverage/CMakeFiles/coverage.dir
+/mnt/c/Code/Music-Version-Control/build-coverage/CMakeFiles/test.dir
+/mnt/c/Code/Music-Version-Control/build-coverage/CMakeFiles/edit_cache.dir
+/mnt/c/Code/Music-Version-Control/build-coverage/CMakeFiles/rebuild_cache.dir
