@@ -47,6 +47,13 @@ int handleCheckout(const std::filesystem::path &repoRoot, const std::string &has
     return 0;
 }
 
+int handleStatus(const std::filesystem::path &repoRoot, const std::string &filePath)
+{
+    Repository repo(repoRoot);
+    repo.status(filePath);
+    return 0;
+}
+
 int main(int argc, char *argv[])
 {
     // Require at least one argument (the command)
@@ -68,7 +75,7 @@ int main(int argc, char *argv[])
     }
 
     if (command != "init" && command != "add" && command != "commit" &&
-        command != "log" && command != "checkout")
+        command != "log" && command != "checkout" && command != "status")
     {
         std::cerr << "Unknown command: " << command << "\n";
         printUsage();
@@ -138,6 +145,15 @@ int main(int argc, char *argv[])
             }
             return handleCheckout(repoRoot, argv[2], argv[3]);
         }
+        else if (command == "status")
+        {
+            if (argc < 3)
+            {
+                std::cerr << "Usage: bvcs status <file>\n";
+                return 1;
+            }
+            return handleStatus(repoRoot, argv[2]);
+        }
     }
     catch (const std::runtime_error &e)
     {
@@ -185,6 +201,7 @@ void printUsage()
         << "  commit -m <message>       Commit the staged file\n"
         << "  log                       Show commit history\n"
         << "  checkout <hash> <output>  Restore a file from a commit\n"
+        << "  status <file>             Show committed/staged/working hashes\n"
         << "  help <command>            Show help for a specific command\n";
 }
 
@@ -227,6 +244,13 @@ void printHelp(const std::string &command)
             << "  Retrieves the file associated with <hash> and writes\n"
             << "  it to <output_path>. The original file is not modified.\n"
             << "  Use 'bvcs log' to find commit hashes.\n";
+    }
+    else if (command == "status")
+    {
+        std::cout
+            << "bvcs status <file>\n\n"
+            << "  Compares three states for <file>:\n"
+            << "  last committed blob hash, staged hash, and current working hash.\n";
     }
     else
     {

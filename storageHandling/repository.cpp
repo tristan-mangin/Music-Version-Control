@@ -16,6 +16,7 @@
 #include <iostream>
 #include <stdexcept>
 #include <ctime>
+#include <vector>
 
 /**
  * Constructs a Repository rooted at the given path. Does not initialize anythin on the disk. Need to
@@ -66,6 +67,13 @@ void Repository::add(const std::filesystem::path &filePath)
 
     // Store the blob and record its hash in the index
     std::string hash = storeFromFile(m_root, filePath);
+
+    std::string stagedHash = getStagedHash(m_root);
+    if (!stagedHash.empty() && stagedHash != hash)
+    {
+        std::cerr << "warning: replacing previously staged file\n";
+    }
+
     stage(m_root, hash);
 
     std::cout << "Staged " << filePath.filename().string()
@@ -243,13 +251,68 @@ std::string Repository::resolveRef(const std::string &hashOrBranch) const
         throw std::runtime_error("Hash too short to resolve: " + hashOrBranch);
     }
 
-    // Verify the object actually exists before returning
-    if (!exists(m_root, hashOrBranch))
+    // If a full hash is provided and exists, use it directly.
+    if (exists(m_root, hashOrBranch))
+    {
+        return hashOrBranch;
+    }
+
+    // Otherwise resolve it as a hash prefix by scanning the object store.
+    std::vector<std::string> matches;
+    std::filesystem::path objectsRoot = bvcsDir() / "objects";
+    if (std::filesystem::exists(objectsRoot))
+    {
+        for (const auto &dirEntry : std::filesystem::directory_iterator(objectsRoot))
+        {
+            if (!dirEntry.is_directory())
+            {
+                continue;
+            }
+
+            std::string shard = dirEntry.path().filename().string();
+            if (shard.length() != 2)
+            {
+                continue;
+            }
+
+            for (const auto &fileEntry : std::filesystem::directory_iterator(dirEntry.path()))
+            {
+                if (!fileEntry.is_regular_file())
+                {
+                    continue;
+                }
+
+                std::string suffix = fileEntry.path().filename().string();
+                std::string fullHash = shard + suffix;
+                if (fullHash.rfind(hashOrBranch, 0) == 0)
+                {
+                    // Restrict checkout ref resolution to commit-like objects.
+                    try
+                    {
+                        std::vector<unsigned char> data = readFileBinary(fileEntry.path());
+                        (void)deserializeCommit(data);
+                        matches.push_back(fullHash);
+                    }
+                    catch (...)
+                    {
+                        // Not a commit object; ignore for checkout ref resolution.
+                    }
+                }
+            }
+        }
+    }
+
+    if (matches.empty())
     {
         throw std::runtime_error("Could not resolve ref: " + hashOrBranch);
     }
 
-    return hashOrBranch;
+    if (matches.size() > 1)
+    {
+        throw std::runtime_error("Ambiguous ref prefix: " + hashOrBranch);
+    }
+
+    return matches.front();
 }
 
 /**
@@ -273,5 +336,65 @@ void Repository::assertStaged() const
     {
         throw std::runtime_error(
             "Nothing staged. Run 'bvcs add <file>' first.");
+    }
+}
+
+/**
+ * Compares three states: the last committed blob hash, the currently staged hash, and the hash of the file on disk right now
+ */
+void Repository::status(const std::filesystem::path &filePath) const
+{
+    assertInitialized();
+
+    if (!std::filesystem::exists(filePath))
+    {
+        throw std::runtime_error("File not found: " + filePath.string());
+    }
+
+    std::string headCommitHash = headHash();
+    std::string stagedHash = getStagedHash(m_root);
+
+    if (headCommitHash.empty())
+    {
+        std::cout << "No commits yet.\n";
+        return;
+    }
+
+    std::filesystem::path commitPath = objectPath(m_root, headCommitHash);
+    if (!std::filesystem::exists(commitPath))
+    {
+        throw std::runtime_error("HEAD commit object is missing: " + headCommitHash);
+    }
+
+    std::vector<unsigned char> commitData = readFileBinary(commitPath);
+    Commit headCommit = deserializeCommit(commitData);
+    std::string committedBlobHash = headCommit.blobHash;
+
+    std::string workingHash = hashFile(filePath);
+
+    std::cout << "On commit: " << committedBlobHash.substr(0, 8) << "...\n";
+
+    if (!stagedHash.empty())
+    {
+        std::cout << "Staged:    " << stagedHash.substr(0, 8) << "... ";
+        if (committedBlobHash == stagedHash)
+            std::cout << "(unchanged)\n";
+        else
+            std::cout << "(modified)\n";
+    }
+    else
+    {
+        std::cout << "Staged:    " << "(none)\n";
+    }
+
+    std::cout << "Working:   " << workingHash.substr(0, 8) << "... ";
+    std::string workingBaseline = stagedHash.empty() ? committedBlobHash : stagedHash;
+    if (workingHash == workingBaseline)
+    {
+        std::cout << "(unchanged)\n";
+    }
+    else
+    {
+        std::cout << "(modified)\n";
     }
 }
