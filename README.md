@@ -13,8 +13,9 @@ Personal project testing the concept of an open-source version control platform 
 | PostgreSQL   | Database                                         | 
 
 # Latest Updates
-### Binary File (Git Like) Storage Handling - 4/17/2026
+### Binary File (Git Like) Storage Handling - 4/21/2026
 - Find, create, and add hashed binary objects to repositories
+- Status and add checks to add only what is wanted
 - Implemented and tested in C++ 
 
 # Features to be Implemented
