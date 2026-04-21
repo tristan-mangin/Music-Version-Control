@@ -113,7 +113,7 @@ struct TestEnv
     {
         std::ifstream in(path, std::ios::binary);
         return std::string((std::istreambuf_iterator<char>(in)),
-                            std::istreambuf_iterator<char>());
+                           std::istreambuf_iterator<char>());
     }
 };
 
@@ -175,7 +175,7 @@ void test_init_failsIfAlreadyInitialized(const std::string &binaryPath)
           result.exitCode != 0);
     check("init: error message mentions repository already exists",
           result.output.find("already") != std::string::npos ||
-          result.output.find("Error") != std::string::npos);
+              result.output.find("Error") != std::string::npos);
 }
 
 // ─── add ─────────────────────────────────────────────────────────────────────
@@ -214,6 +214,19 @@ void test_add_failsOutsideRepo(const std::string &binaryPath)
     auto result = env.bvcs("add test.wav");
     check("add: exits with non-zero code outside a repo",
           result.exitCode != 0);
+}
+
+void test_add_refusesIgnoredFile(const std::string &binaryPath)
+{
+    TestEnv env(binaryPath);
+    env.bvcs("init");
+    env.makeFile(".bvcsignore", "*.tmp\n");
+    env.makeFile("scratch.tmp", "temporary data");
+
+    auto result = env.bvcs("add scratch.tmp");
+    check("add: exits with non-zero code for ignored file", result.exitCode != 0);
+    check("add: output mentions ignored file",
+          result.output.find("ignored") != std::string::npos);
 }
 
 // ─── commit ──────────────────────────────────────────────────────────────────
@@ -308,7 +321,7 @@ void test_log_showsMultipleCommits(const std::string &binaryPath)
     auto result = env.bvcs("log");
     check("log: output contains both commit messages",
           result.output.find("version one") != std::string::npos &&
-          result.output.find("version two") != std::string::npos);
+              result.output.find("version two") != std::string::npos);
 }
 
 // ─── checkout ────────────────────────────────────────────────────────────────
@@ -359,7 +372,7 @@ void test_help_printsUsage(const std::string &binaryPath)
     check("help: exits with code 0", result.exitCode == 0);
     check("help: output contains command list",
           result.output.find("init") != std::string::npos &&
-          result.output.find("commit") != std::string::npos);
+              result.output.find("commit") != std::string::npos);
 }
 
 void test_help_commandSpecificHelp(const std::string &binaryPath)
@@ -378,7 +391,7 @@ void test_unknownCommand_failsWithMessage(const std::string &binaryPath)
     check("unknown command: exits with non-zero code", result.exitCode != 0);
     check("unknown command: output mentions unknown command",
           result.output.find("Unknown") != std::string::npos ||
-          result.output.find("unknown") != std::string::npos);
+              result.output.find("unknown") != std::string::npos);
 }
 
 // ─── main ────────────────────────────────────────────────────────────────────
@@ -416,6 +429,7 @@ int main(int argc, char *argv[])
     test_add_failsWithNoArguments(binaryPath);
     test_add_failsForMissingFile(binaryPath);
     test_add_failsOutsideRepo(binaryPath);
+    test_add_refusesIgnoredFile(binaryPath);
 
     test_commit_succeedsWithDashM(binaryPath);
     test_commit_succeedsWithoutDashM(binaryPath);
@@ -435,6 +449,7 @@ int main(int argc, char *argv[])
     test_help_commandSpecificHelp(binaryPath);
     test_unknownCommand_failsWithMessage(binaryPath);
 
-    std::cout << "\n" << passed << " passed, " << failed << " failed\n";
+    std::cout << "\n"
+              << passed << " passed, " << failed << " failed\n";
     return failed > 0 ? 1 : 0;
 }

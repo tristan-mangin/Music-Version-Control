@@ -1,0 +1,41 @@
+# OS metadata
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Editor/IDE temp
+*.swp
+*.swo
+*~
+.vscode/
+.idea/
+
+# Generic temp / autosave / backup
+*.tmp
+*.temp
+*.bak
+*.old
+*.autosave
+*.lock
+
+# DAW-specific caches/backups (common)
+*.asd                 # Ableton analysis files
+Ableton Project Info/
+Session File Backups/ # Pro Tools
+WaveCache.wfm         # Pro Tools
+*.reapeaks            # REAPER peak cache
+*.rpp-bak             # REAPER backup
+
+# Plugin/cache folders
+.cache/
+Cache/
+__MACOSX/
+
+# Render/export outputs (usually reproducible)
+exports/
+render/
+renders/
+bounce/
+bounces/
+stems/
+mixdowns/
