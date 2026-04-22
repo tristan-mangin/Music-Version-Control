@@ -15,3 +15,65 @@ coverage/
 .vscode/
 .idea/
 *.user
+
+# --- Python ---
+__pycache__/
+*.py[cod]
+*$py.class
+
+# --- Django & Database ---
+db.sqlite3
+*.log
+*.pot
+*.pyc
+*.pyo
+*.mo
+*.db
+*.sql
+*.sqlite3
+media/
+staticfiles/
+
+# --- Environment & Config ---
+.env
+.env.*
+*.ini
+*.cfg
+*.envrc
+.vscode/
+.idea/
+
+# --- Virtual Environment ---
+venv/
+env/
+ENV/
+.venv/
+
+# --- OS-specific ---
+.DS_Store
+Thumbs.db
+
+# --- Migrations cache (keep migration files, ignore cache) ---
+*/migrations/__pycache__/
+
+# --- Coverage & testing ---
+.coverage
+htmlcov/
+.tox/
+.pytest_cache/
+nosetests.xml
+coverage.xml
+*.cover
+*.py,cover
+.hypothesis/
+.pyre/
+.mypy_cache/
+.cache/
+
+# --- JetBrains (PyCharm/WebStorm) ---
+.idea/
+*.iml
+
+# --- Logs ---
+*.log
+logs/

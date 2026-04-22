@@ -11,3 +11,15 @@ TODO LIST:
     - commit.cpp/h              *
     - index.cpp/h               *
     - repository.cpp/h          *
+
+Python Notes
+    make virtual environment        --> python3 -m venv venv
+    ativate virtual environment     --> source venv/bin/activate
+    (python and pip don't need to be python3 and pip3 after activating venv)
+    
+    install django                  --> pip3 install django djangorestframework
+    freeze dependencies             --> pip freeze > requirements.txt
+
+    create django project and app   --> django-admin startproject bvcs_backend
+                                    --> cd bvcs_backend
+                                    --> python manage.py startapp bvcs
