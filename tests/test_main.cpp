@@ -324,6 +324,40 @@ void test_log_showsMultipleCommits(const std::string &binaryPath)
               result.output.find("version two") != std::string::npos);
 }
 
+void test_log_jsonFormat_outputsJson(const std::string &binaryPath)
+{
+    TestEnv env(binaryPath);
+    env.bvcs("init");
+    env.makeFile("test.wav", "audio content");
+    env.bvcs("add test.wav");
+    env.bvcs("commit -m \"first commit\"");
+
+    auto result = env.bvcs("log --format=json");
+    check("log --format=json: exits with code 0", result.exitCode == 0);
+    check("log --format=json: output includes commits key",
+          result.output.find("\"commits\"") != std::string::npos);
+    check("log --format=json: output includes commit message",
+          result.output.find("first commit") != std::string::npos);
+}
+
+// ─── status ─────────────────────────────────────────────────────────────────
+
+void test_status_jsonFormat_outputsJson(const std::string &binaryPath)
+{
+    TestEnv env(binaryPath);
+    env.bvcs("init");
+    env.makeFile("song.wav", "v1 audio");
+    env.bvcs("add song.wav");
+    env.bvcs("commit -m \"first\"");
+
+    auto result = env.bvcs("status song.wav --format=json");
+    check("status --format=json: exits with code 0", result.exitCode == 0);
+    check("status --format=json: output includes working_state",
+          result.output.find("\"working_state\"") != std::string::npos);
+    check("status --format=json: output includes committed_blob",
+          result.output.find("\"committed_blob\"") != std::string::npos);
+}
+
 // ─── checkout ────────────────────────────────────────────────────────────────
 
 void test_checkout_restoresFile(const std::string &binaryPath)
@@ -440,6 +474,9 @@ int main(int argc, char *argv[])
     test_log_succeedsOnEmptyRepo(binaryPath);
     test_log_showsCommitAfterCommit(binaryPath);
     test_log_showsMultipleCommits(binaryPath);
+    test_log_jsonFormat_outputsJson(binaryPath);
+
+    test_status_jsonFormat_outputsJson(binaryPath);
 
     test_checkout_restoresFile(binaryPath);
     test_checkout_failsWithUnknownHash(binaryPath);

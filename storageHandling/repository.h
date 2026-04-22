@@ -30,9 +30,9 @@ public:
     void init();
     void add(const std::filesystem::path &filePath);
     void commit(const std::string &message);
-    void log() const;
+    void log(bool jsonFormat = false) const;
     void checkout(const std::string &hashOrBranch, const std::filesystem::path &outputPath) const;
-    void status(const std::filesystem::path &filePath) const;
+    void status(const std::filesystem::path &filePath, bool jsonFormat = false) const;
     std::filesystem::path root() const;
     bool isInitialized() const;
 

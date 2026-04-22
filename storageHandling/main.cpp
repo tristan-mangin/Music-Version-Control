@@ -33,10 +33,10 @@ int handleCommit(const std::filesystem::path &repoRoot, const std::string &messa
     return 0;
 }
 
-int handleLog(const std::filesystem::path &repoRoot)
+int handleLog(const std::filesystem::path &repoRoot, bool jsonFormat)
 {
     Repository repo(repoRoot);
-    repo.log();
+    repo.log(jsonFormat);
     return 0;
 }
 
@@ -47,10 +47,10 @@ int handleCheckout(const std::filesystem::path &repoRoot, const std::string &has
     return 0;
 }
 
-int handleStatus(const std::filesystem::path &repoRoot, const std::string &filePath)
+int handleStatus(const std::filesystem::path &repoRoot, const std::string &filePath, bool jsonFormat)
 {
     Repository repo(repoRoot);
-    repo.status(filePath);
+    repo.status(filePath, jsonFormat);
     return 0;
 }
 
@@ -134,7 +134,26 @@ int main(int argc, char *argv[])
         }
         else if (command == "log")
         {
-            return handleLog(repoRoot);
+            bool jsonFormat = false;
+            if (argc == 3)
+            {
+                if (std::string(argv[2]) == "--format=json")
+                {
+                    jsonFormat = true;
+                }
+                else
+                {
+                    std::cerr << "Usage: bvcs log [--format=json]\n";
+                    return 1;
+                }
+            }
+            else if (argc > 3)
+            {
+                std::cerr << "Usage: bvcs log [--format=json]\n";
+                return 1;
+            }
+
+            return handleLog(repoRoot, jsonFormat);
         }
         else if (command == "checkout")
         {
@@ -149,10 +168,30 @@ int main(int argc, char *argv[])
         {
             if (argc < 3)
             {
-                std::cerr << "Usage: bvcs status <file>\n";
+                std::cerr << "Usage: bvcs status <file> [--format=json]\n";
                 return 1;
             }
-            return handleStatus(repoRoot, argv[2]);
+
+            bool jsonFormat = false;
+            if (argc == 4)
+            {
+                if (std::string(argv[3]) == "--format=json")
+                {
+                    jsonFormat = true;
+                }
+                else
+                {
+                    std::cerr << "Usage: bvcs status <file> [--format=json]\n";
+                    return 1;
+                }
+            }
+            else if (argc > 4)
+            {
+                std::cerr << "Usage: bvcs status <file> [--format=json]\n";
+                return 1;
+            }
+
+            return handleStatus(repoRoot, argv[2], jsonFormat);
         }
     }
     catch (const std::runtime_error &e)
@@ -199,9 +238,9 @@ void printUsage()
         << "  init                      Initialize a new repository\n"
         << "  add <file>                Stage a file for committing\n"
         << "  commit -m <message>       Commit the staged file\n"
-        << "  log                       Show commit history\n"
+        << "  log [--format=json]       Show commit history\n"
         << "  checkout <hash> <output>  Restore a file from a commit\n"
-        << "  status <file>             Show committed/staged/working hashes\n"
+        << "  status <file> [--format=json]  Show committed/staged/working hashes\n"
         << "  help <command>            Show help for a specific command\n";
 }
 
@@ -233,9 +272,10 @@ void printHelp(const std::string &command)
     else if (command == "log")
     {
         std::cout
-            << "bvcs log\n\n"
+            << "bvcs log [--format=json]\n\n"
             << "  Displays the commit history from newest to oldest.\n"
-            << "  Each entry shows the commit hash, date, and message.\n";
+            << "  Each entry shows the commit hash, date, and message.\n"
+            << "  Use --format=json to emit machine-readable output.\n";
     }
     else if (command == "checkout")
     {
@@ -248,9 +288,10 @@ void printHelp(const std::string &command)
     else if (command == "status")
     {
         std::cout
-            << "bvcs status <file>\n\n"
+            << "bvcs status <file> [--format=json]\n\n"
             << "  Compares three states for <file>:\n"
-            << "  last committed blob hash, staged hash, and current working hash.\n";
+            << "  last committed blob hash, staged hash, and current working hash.\n"
+            << "  Use --format=json to emit machine-readable output.\n";
     }
     else
     {
