@@ -167,6 +167,13 @@ class StageFileView(APIView):
         if not uploaded_file:
             return Response({"error": "No file provided."}, status=status.HTTP_400_BAD_REQUEST)
 
+        max_size = 524288000  # 500MB
+        if uploaded_file.size > max_size:
+            return Response(
+                {"error": f"File too large. Maximum size is 500MB."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
         # Write the uploaded file into the repo directory
         repo_path = Path(repo.path)
         dest_path = repo_path / uploaded_file.name

@@ -126,3 +126,7 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 BVCS_BINARY_PATH = '/mnt/c/Code/Music-Version-Control/build/bvcs'
 BVCS_REPOS_ROOT  = '/mnt/c/Code/Music-Version-Control/repos'
+
+# Max upload size: 500MB (to support large WAV files)
+DATA_UPLOAD_MAX_MEMORY_SIZE = 524288000
+FILE_UPLOAD_MAX_MEMORY_SIZE = 524288000

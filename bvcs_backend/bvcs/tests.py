@@ -272,6 +272,27 @@ class TestStageFileView(APITestCase):
         response = self.client.post('/api/repos/99999/add/', {}, format='multipart')
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
 
+    def test_stage_file_too_large(self):
+        from django.core.files.uploadedfile import SimpleUploadedFile
+        from bvcs.views import StageFileView
+
+        mock_file = MagicMock()
+        mock_file.name = 'big.wav'
+        mock_file.size = 524288001
+
+        mock_request = MagicMock()
+        mock_request.FILES = {'file': mock_file}
+
+        mock_repo = MagicMock()
+        mock_repo.path = '/some/path'
+
+        view = StageFileView()
+
+        with patch.object(view, 'get_repo', return_value=mock_repo):
+            response = view.post(mock_request, repo_id=self.repo.id)
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('error', response.data)
 
 class TestCheckoutView(APITestCase):
     def setUp(self):
