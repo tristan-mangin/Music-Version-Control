@@ -32,6 +32,8 @@ Python Notes
                                     --> touch bvcs/serializers.py
                                     --> touch bvcs/urls.py
 
+    create superuser                --> python manage.py createsuperuser
+
 WHEN BUILDING
     source venv/bin/activate
     cd bvcs_backend
