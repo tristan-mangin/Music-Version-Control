@@ -47,16 +47,18 @@ class BVCSClient:
         Returns commit history as a list of dicts.
         Requires --format=json output from bvcs binary
         '''
-        output = self._run(['log', '--format=json'])
-        return json.loads(output)
+        output = self._run(["log", "--format=json"])
+        data = json.loads(output)
+        return data["commits"]
 
     def status(self) -> dict:
         '''
         Returns current staging status as a dict.
         Requires --format=json output from bvcs binary
         '''
-        output = self._run(['status', '--format=json'])
-        return json.loads(output)
+        output = self._run(["status", "--format=json"])
+        data = json.loads(output)
+        return data["status"]
 
     def checkout(self, commit_hash: str, output_path: str) -> None:
         '''Checkout a specific commit to the given output path'''

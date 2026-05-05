@@ -31,3 +31,8 @@ Python Notes
     create files to fill in         --> touch bvcs/client.py    
                                     --> touch bvcs/serializers.py
                                     --> touch bvcs/urls.py
+
+WHEN BUILDING
+    source venv/bin/activate
+    cd bvcs_backend
+    python manage.py runserver
