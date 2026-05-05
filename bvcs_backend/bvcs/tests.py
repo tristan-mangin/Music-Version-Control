@@ -316,8 +316,8 @@ class TestCheckoutView(APITestCase):
     def test_checkout_success(self, MockClient):
         mock_instance = MockClient.return_value
         mock_instance.checkout.return_value = None
-
-        response = self.client.get(f'/api/repos/{self.repo.id}/checkout/abc123/')
+        valid_hash = 'a' * 64
+        response = self.client.get(f'/api/repos/{self.repo.id}/checkout/{valid_hash}/')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertIn('output_path', response.data)
 
@@ -325,13 +325,32 @@ class TestCheckoutView(APITestCase):
     def test_checkout_bvcs_error(self, MockClient):
         mock_instance = MockClient.return_value
         mock_instance.checkout.side_effect = BVCSError('checkout failed')
-
-        response = self.client.get(f'/api/repos/{self.repo.id}/checkout/abc123/')
+        valid_hash = 'a' * 64
+        response = self.client.get(f'/api/repos/{self.repo.id}/checkout/{valid_hash}/')
         self.assertEqual(response.status_code, status.HTTP_500_INTERNAL_SERVER_ERROR)
 
     def test_checkout_nonexistent_repo(self):
         response = self.client.get('/api/repos/99999/checkout/abc123/')
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+    def test_checkout_invalid_hash_too_short(self):
+        response = self.client.get(f'/api/repos/{self.repo.id}/checkout/abc123/')
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('error', response.data)
+
+    def test_checkout_invalid_hash_non_hex(self):
+        invalid_hash = 'z' * 64
+        response = self.client.get(f'/api/repos/{self.repo.id}/checkout/{invalid_hash}/')
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('error', response.data)
+
+    @patch('bvcs.views.BVCSClient')
+    def test_checkout_valid_hash_accepted(self, MockClient):
+        mock_instance = MockClient.return_value
+        mock_instance.checkout.return_value = None
+        valid_hash = 'a' * 64
+        response = self.client.get(f'/api/repos/{self.repo.id}/checkout/{valid_hash}/')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
 
 # Repository name validation tests 
 

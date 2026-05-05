@@ -11,6 +11,7 @@ from .models import Repository, Commit
 from .serializers import RepositorySerializer, RepositoryCreateSerializer, CommitSerializer
 from .client import BVCSClient, BVCSError
 
+import re
 
 class RepositoryListView(APIView):
     """
@@ -193,6 +194,8 @@ class StageFileView(APIView):
 
         return Response({"staged": uploaded_file.name}, status=status.HTTP_200_OK)
 
+def is_valid_sha256(hash_string: str) -> bool:
+    return bool(re.fullmatch(r'[a-fA-F0-9]{64}', hash_string))
 
 class CheckoutView(APIView):
     """
@@ -210,6 +213,12 @@ class CheckoutView(APIView):
         if repo is None:
             return Response({"error": "Repository not found."}, status=status.HTTP_404_NOT_FOUND)
 
+        if not is_valid_sha256(commit_hash):
+            return Response(
+                {"error": "Invalid commit hash. Expected a 64-character hex string."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
         repo_path = Path(repo.path)
         output_path = repo_path / f"checkout_{commit_hash[:8]}"
 
@@ -220,7 +229,6 @@ class CheckoutView(APIView):
             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
         return Response({"output_path": str(output_path)}, status=status.HTTP_200_OK)
-
 
 class StatusView(APIView):
     """
