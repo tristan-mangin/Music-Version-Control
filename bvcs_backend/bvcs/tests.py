@@ -297,3 +297,46 @@ class TestCheckoutView(APITestCase):
     def test_checkout_nonexistent_repo(self):
         response = self.client.get('/api/repos/99999/checkout/abc123/')
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+# Repository name validation tests 
+
+class TestRepositoryNameValidation(APITestCase):
+    @patch('bvcs.views.BVCSClient')
+    def test_valid_name_accepted(self, MockClient):
+        mock_instance = MockClient.return_value
+        mock_instance.init.return_value = None
+        fake_path = MagicMock()
+        fake_path.exists.return_value = False
+        fake_path.__str__ = lambda self: '/fake/path/valid-repo'
+        MockClient.repo_path_for.return_value = fake_path
+
+        response = self.client.post('/api/repos/', {'name': 'valid-repo'}, format='json')
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+
+    def test_name_with_slash_rejected(self):
+        response = self.client.post('/api/repos/', {'name': 'bad/name'}, format='json')
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_name_with_dotdot_rejected(self):
+        response = self.client.post('/api/repos/', {'name': '../etc'}, format='json')
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_name_with_dot_rejected(self):
+        response = self.client.post('/api/repos/', {'name': 'bad.name'}, format='json')
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_name_with_spaces_rejected(self):
+        response = self.client.post('/api/repos/', {'name': 'bad name'}, format='json')
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_blank_name_rejected(self):
+        response = self.client.post('/api/repos/', {'name': ''}, format='json')
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_name_with_backslash_rejected(self):
+        response = self.client.post('/api/repos/', {'name': 'bad\\name'}, format='json')
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_name_too_long_rejected(self):
+        response = self.client.post('/api/repos/', {'name': 'a' * 256}, format='json')
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
