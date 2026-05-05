@@ -1,7 +1,0 @@
-1:test_hasher
-2:test_utils
-3:test_object_store
-4:test_commit
-5:test_index
-6:test_repository
-7:test_main
