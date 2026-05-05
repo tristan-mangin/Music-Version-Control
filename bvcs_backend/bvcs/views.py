@@ -128,7 +128,12 @@ class CommitListView(APIView):
         except BVCSError as e:
             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-        # The newest commit is first after log()
+        if not raw_commits:
+            return Response(
+                {"error": "Commit appeared to succeed but no commits found in log."},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
+
         latest = raw_commits[0]
         ts = datetime.fromtimestamp(latest["timestamp"], tz=dt_timezone.utc)
         commit, _ = Commit.objects.get_or_create(
@@ -143,7 +148,6 @@ class CommitListView(APIView):
         )
         serializer = CommitSerializer(commit)
         return Response(serializer.data, status=status.HTTP_201_CREATED)
-
 
 class StageFileView(APIView):
     """

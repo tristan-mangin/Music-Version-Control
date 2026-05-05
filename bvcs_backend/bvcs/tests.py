@@ -238,7 +238,21 @@ class TestCommitListView(APITestCase):
 
     def test_get_commits_nonexistent_repo(self):
         response = self.client.get('/api/repos/99999/commits/')
-        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)\
+
+    @patch('bvcs.views.BVCSClient')
+    def test_create_commit_empty_log_returns_500(self, MockClient):
+        mock_instance = MockClient.return_value
+        mock_instance.commit.return_value = 'abc123'
+        mock_instance.log.return_value = []
+
+        response = self.client.post(
+            f'/api/repos/{self.repo.id}/commits/',
+            {'message': 'first commit'},
+            format='json'
+        )
+        self.assertEqual(response.status_code, status.HTTP_500_INTERNAL_SERVER_ERROR)
+        self.assertIn('error', response.data)
 
 
 class TestStageFileView(APITestCase):
