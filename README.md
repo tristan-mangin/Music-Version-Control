@@ -13,6 +13,14 @@ Personal project testing the concept of an open-source version control platform 
 | PostgreSQL   | Database                                         | 
 
 # Latest Updates
+
+### End-to-end Workflow working - 5/5/2026
+- POST /api/repos/ — created a repo on disk and in the DB
+- POST /api/repos/2/add/ — staged a file
+- POST /api/repos/2/commits/ — created a commit
+- GET /api/repos/2/commits/ — retrieved and synced commit history
+- GET /api/repos/2/checkout/{hash}/ — retrieved the correct file contents
+
 ### Binary File (Git Like) Storage Handling - 4/21/2026
 - Find, create, and add hashed binary objects to repositories
 - Status and add checks to add only what is wanted
