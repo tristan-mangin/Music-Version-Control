@@ -1,8 +1,0 @@
-test_hasher 1 0.0366297
-test_utils 1 0.0394138
-test_object_store 1 0.0511168
-test_commit 1 0.0402019
-test_index 1 0.0476108
-test_repository 1 0.0891925
-test_main 1 2.15169
----
