@@ -172,7 +172,7 @@ namespace
     }
 
     /**
-     * Determines if a given file path should be ignored based on the patterns in .bvcsignore. The file path 
+     * Determines if a given file path should be ignored based on the patterns in .bvcsignore. The file path
      * should be an absolute path; the function will compute its path relative to the repo root and match against
      * the ignore patterns.
      * @param repoRoot The root directory of the repository.
@@ -240,6 +240,46 @@ namespace
         }
 
         return ignored;
+    }
+
+    /**
+     * Escapes characters required for safe JSON string output.
+     */
+    std::string escapeJson(const std::string &input)
+    {
+        std::string out;
+        out.reserve(input.size());
+        for (char ch : input)
+        {
+            switch (ch)
+            {
+            case '"':
+                out += "\\\"";
+                break;
+            case '\\':
+                out += "\\\\";
+                break;
+            case '\b':
+                out += "\\b";
+                break;
+            case '\f':
+                out += "\\f";
+                break;
+            case '\n':
+                out += "\\n";
+                break;
+            case '\r':
+                out += "\\r";
+                break;
+            case '\t':
+                out += "\\t";
+                break;
+            default:
+                out += ch;
+                break;
+            }
+        }
+        return out;
     }
 }
 
@@ -345,16 +385,30 @@ void Repository::commit(const std::string &message)
 /**
  * Walks the commit chain from HEAD and prints each commit's metadata to stdout.
  */
-void Repository::log() const
+void Repository::log(bool jsonFormat) const
 {
     assertInitialized();
 
     std::string hash = headHash();
     if (hash.empty())
     {
-        std::cout << "No commits yet.\n";
+        if (jsonFormat)
+        {
+            std::cout << "{\"commits\":[]}\n";
+        }
+        else
+        {
+            std::cout << "No commits yet.\n";
+        }
         return;
     }
+
+    if (jsonFormat)
+    {
+        std::cout << "{\"commits\":[";
+    }
+
+    bool first = true;
 
     // Walk the parent chain until we reach a commit with no parent
     while (!hash.empty())
@@ -364,11 +418,35 @@ void Repository::log() const
         Commit c = deserializeCommit(data);
         c.hash = hash;
 
-        std::cout << "commit " << c.hash << "\n"
-                  << "date:   " << formatTimestamp(c.timestamp) << "\n"
-                  << "        " << c.message << "\n\n";
+        if (jsonFormat)
+        {
+            if (!first)
+            {
+                std::cout << ",";
+            }
+            std::cout << "{"
+                      << "\"hash\":\"" << c.hash << "\","
+                      << "\"parent_hash\":\"" << c.parentHash << "\","
+                      << "\"blob_hash\":\"" << c.blobHash << "\","
+                      << "\"timestamp\":" << c.timestamp << ","
+                      << "\"date\":\"" << escapeJson(formatTimestamp(c.timestamp)) << "\","
+                      << "\"message\":\"" << escapeJson(c.message) << "\""
+                      << "}";
+            first = false;
+        }
+        else
+        {
+            std::cout << "commit " << c.hash << "\n"
+                      << "date:   " << formatTimestamp(c.timestamp) << "\n"
+                      << "        " << c.message << "\n\n";
+        }
 
         hash = c.parentHash;
+    }
+
+    if (jsonFormat)
+    {
+        std::cout << "]}\n";
     }
 }
 
@@ -572,7 +650,7 @@ void Repository::assertStaged() const
 /**
  * Compares three states: the last committed blob hash, the currently staged hash, and the hash of the file on disk right now
  */
-void Repository::status(const std::filesystem::path &filePath) const
+void Repository::status(const std::filesystem::path &filePath, bool jsonFormat) const
 {
     assertInitialized();
 
@@ -586,7 +664,14 @@ void Repository::status(const std::filesystem::path &filePath) const
 
     if (headCommitHash.empty())
     {
-        std::cout << "No commits yet.\n";
+        if (jsonFormat)
+        {
+            std::cout << "{\"error\":\"No commits yet.\"}\n";
+        }
+        else
+        {
+            std::cout << "No commits yet.\n";
+        }
         return;
     }
 
@@ -601,6 +686,37 @@ void Repository::status(const std::filesystem::path &filePath) const
     std::string committedBlobHash = headCommit.blobHash;
 
     std::string workingHash = hashFile(filePath);
+    std::string stagedState = "none";
+    if (!stagedHash.empty())
+    {
+        stagedState = (committedBlobHash == stagedHash) ? "unchanged" : "modified";
+    }
+
+    std::string workingBaseline = stagedHash.empty() ? committedBlobHash : stagedHash;
+    std::string workingState = (workingHash == workingBaseline) ? "unchanged" : "modified";
+
+    if (jsonFormat)
+    {
+        std::cout << "{"
+                  << "\"head_commit\":\"" << headCommitHash << "\","
+                  << "\"committed_blob\":\"" << committedBlobHash << "\","
+                  << "\"staged_blob\":";
+
+        if (stagedHash.empty())
+        {
+            std::cout << "null";
+        }
+        else
+        {
+            std::cout << "\"" << stagedHash << "\"";
+        }
+
+        std::cout << ",\"staged_state\":\"" << stagedState << "\","
+                  << "\"working_blob\":\"" << workingHash << "\","
+                  << "\"working_state\":\"" << workingState << "\""
+                  << "}\n";
+        return;
+    }
 
     std::cout << "On commit: " << committedBlobHash.substr(0, 8) << "...\n";
 
@@ -618,8 +734,7 @@ void Repository::status(const std::filesystem::path &filePath) const
     }
 
     std::cout << "Working:   " << workingHash.substr(0, 8) << "... ";
-    std::string workingBaseline = stagedHash.empty() ? committedBlobHash : stagedHash;
-    if (workingHash == workingBaseline)
+    if (workingState == "unchanged")
     {
         std::cout << "(unchanged)\n";
     }

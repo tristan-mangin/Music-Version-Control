@@ -13,12 +13,18 @@ Personal project testing the concept of an open-source version control platform 
 | PostgreSQL   | Database                                         | 
 
 # Latest Updates
-### BVCS (Bindary Version Control System) - 4/21/2026
-- Custom built C++ command line tool that functions similarly to Git, but designed specifically for large binary files (specifically audio recordings and DAW project files).
-- Content-addressed storage used to store every version of a file. Each is identified by the SHA-256 hash of its contents. Stops identical files from being stored more than once and each version is automatically integrity checked.
-- Users initialize a repo with the bvcs init, stage a file with bvcs checkout, with all version history stored locally in a .bvcs folder.
-- All file I/O is streamed directly between disk locations without loading file contents into memory, making it practical for audio files that can be hundreds of megabytes in size.
-- This CLI is intended to be driven by a Django backend via subprocess calls, which will expose the version control functionality through a REST API and eventually a web frontend featuring audio waveform visualization, Daw project file snapshots, and genre/vibe classification through machine learning.
+
+### End-to-end Workflow working - 5/5/2026
+- POST /api/repos/ — created a repo on disk and in the DB
+- POST /api/repos/2/add/ — staged a file
+- POST /api/repos/2/commits/ — created a commit
+- GET /api/repos/2/commits/ — retrieved and synced commit history
+- GET /api/repos/2/checkout/{hash}/ — retrieved the correct file contents
+
+### Binary File (Git Like) Storage Handling - 4/21/2026
+- Find, create, and add hashed binary objects to repositories
+- Status and add checks to add only what is wanted
+- Implemented and tested in C++ 
 
 # Features to be Implemented
 
