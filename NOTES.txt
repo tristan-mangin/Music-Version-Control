@@ -34,6 +34,9 @@ Python Notes
 
     create superuser                --> python manage.py createsuperuser
 
+    using pytest                    --> pip install pytest-django
+                                    --> pip freeze > requirements.txt
+
 WHEN BUILDING
     source venv/bin/activate
     cd bvcs_backend
