@@ -25,7 +25,7 @@ SECRET_KEY = 'django-insecure-xcch&o&x!pb^(86%d^e(qxy)cm14#tr!)q123ike&utwqhgpni
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['localhost', '127.0.0.1', 'testserver']
 
 
 # Application definition
@@ -126,3 +126,7 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 BVCS_BINARY_PATH = '/mnt/c/Code/Music-Version-Control/build/bvcs'
 BVCS_REPOS_ROOT  = '/mnt/c/Code/Music-Version-Control/repos'
+
+# Max upload size: 500MB (to support large WAV files)
+DATA_UPLOAD_MAX_MEMORY_SIZE = 524288000
+FILE_UPLOAD_MAX_MEMORY_SIZE = 524288000

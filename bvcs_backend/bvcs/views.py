@@ -11,6 +11,7 @@ from .models import Repository, Commit
 from .serializers import RepositorySerializer, RepositoryCreateSerializer, CommitSerializer
 from .client import BVCSClient, BVCSError
 
+import re
 
 class RepositoryListView(APIView):
     """
@@ -128,7 +129,12 @@ class CommitListView(APIView):
         except BVCSError as e:
             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-        # The newest commit is first after log()
+        if not raw_commits:
+            return Response(
+                {"error": "Commit appeared to succeed but no commits found in log."},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
+
         latest = raw_commits[0]
         ts = datetime.fromtimestamp(latest["timestamp"], tz=dt_timezone.utc)
         commit, _ = Commit.objects.get_or_create(
@@ -143,7 +149,6 @@ class CommitListView(APIView):
         )
         serializer = CommitSerializer(commit)
         return Response(serializer.data, status=status.HTTP_201_CREATED)
-
 
 class StageFileView(APIView):
     """
@@ -167,6 +172,13 @@ class StageFileView(APIView):
         if not uploaded_file:
             return Response({"error": "No file provided."}, status=status.HTTP_400_BAD_REQUEST)
 
+        max_size = 524288000  # 500MB
+        if uploaded_file.size > max_size:
+            return Response(
+                {"error": f"File too large. Maximum size is 500MB."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
         # Write the uploaded file into the repo directory
         repo_path = Path(repo.path)
         dest_path = repo_path / uploaded_file.name
@@ -182,6 +194,8 @@ class StageFileView(APIView):
 
         return Response({"staged": uploaded_file.name}, status=status.HTTP_200_OK)
 
+def is_valid_sha256(hash_string: str) -> bool:
+    return bool(re.fullmatch(r'[a-fA-F0-9]{64}', hash_string))
 
 class CheckoutView(APIView):
     """
@@ -199,6 +213,12 @@ class CheckoutView(APIView):
         if repo is None:
             return Response({"error": "Repository not found."}, status=status.HTTP_404_NOT_FOUND)
 
+        if not is_valid_sha256(commit_hash):
+            return Response(
+                {"error": "Invalid commit hash. Expected a 64-character hex string."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
         repo_path = Path(repo.path)
         output_path = repo_path / f"checkout_{commit_hash[:8]}"
 
@@ -209,7 +229,6 @@ class CheckoutView(APIView):
             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
         return Response({"output_path": str(output_path)}, status=status.HTTP_200_OK)
-
 
 class StatusView(APIView):
     """
