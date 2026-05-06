@@ -11,6 +11,10 @@ from .models import Repository, Commit
 from .serializers import RepositorySerializer, RepositoryCreateSerializer, CommitSerializer
 from .client import BVCSClient, BVCSError
 
+import os 
+import mimetypes
+from django.http import FileResponse, HttpResponse
+
 import re
 
 ALLOWED_EXTENSIONS = {'.wav', '.als', '.flp'}
@@ -209,9 +213,41 @@ class StageFileView(APIView):
 def is_valid_sha256(hash_string: str) -> bool:
     return bool(re.fullmatch(r'[a-fA-F0-9]{64}', hash_string))
 
+# class CheckoutView(APIView):
+#     """
+#     GET /api/repos/{id}/checkout/{hash}/  — retrieve a specific version of a file
+#     """
+
+#     def get_repo(self, repo_id):
+#         try:
+#             return Repository.objects.get(pk=repo_id)
+#         except Repository.DoesNotExist:
+#             return None
+
+#     def get(self, request, repo_id, commit_hash):
+#         repo = self.get_repo(repo_id)
+#         if repo is None:
+#             return Response({"error": "Repository not found."}, status=status.HTTP_404_NOT_FOUND)
+
+#         if not is_valid_sha256(commit_hash):
+#             return Response(
+#                 {"error": "Invalid commit hash. Expected a 64-character hex string."},
+#                 status=status.HTTP_400_BAD_REQUEST,
+#             )
+
+#         repo_path = Path(repo.path)
+#         output_path = repo_path / f"checkout_{commit_hash[:8]}"
+
+#         try:
+#             client = BVCSClient(repo_path)
+#             client.checkout(commit_hash, str(output_path))
+#         except BVCSError as e:
+#             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+#         return Response({"output_path": str(output_path)}, status=status.HTTP_200_OK)
 class CheckoutView(APIView):
     """
-    GET /api/repos/{id}/checkout/{hash}/  — retrieve a specific version of a file
+    GET /api/repos/{id}/checkout/{hash}/  — stream a specific version of a file
     """
 
     def get_repo(self, repo_id):
@@ -232,15 +268,44 @@ class CheckoutView(APIView):
             )
 
         repo_path = Path(repo.path)
-        output_path = repo_path / f"checkout_{commit_hash[:8]}"
+        temp_path = repo_path / f".checkout_tmp_{commit_hash[:8]}"
 
         try:
             client = BVCSClient(repo_path)
-            client.checkout(commit_hash, str(output_path))
+            client.checkout(commit_hash, str(temp_path))
+
+            # Try to find the original filename from the commit record
+            filename = self._get_filename(repo, commit_hash) or f"checkout_{commit_hash[:8]}"
+            content_type, _ = mimetypes.guess_type(filename)
+            if content_type is None:
+                content_type = "application/octet-stream"
+
+            with open(temp_path, "rb") as f:
+                file_bytes = f.read()
+
         except BVCSError as e:
             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        except OSError as e:
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        finally:
+            # Always clean up the temp file
+            if temp_path.exists():
+                temp_path.unlink()
 
-        return Response({"output_path": str(output_path)}, status=status.HTTP_200_OK)
+        response = HttpResponse(file_bytes, content_type=content_type)
+        response["Content-Disposition"] = f'attachment; filename="{filename}"'
+        response["Content-Length"] = len(file_bytes)
+        return response
+
+    def _get_filename(self, repo, commit_hash):
+        """Try to infer the original filename from the commit message or DB record."""
+        try:
+            commit = Commit.objects.get(hash=commit_hash, repository=repo)
+            # If the commit message contains a filename pattern, extract it
+            # For now return None and let the caller use a fallback
+            return None
+        except Commit.DoesNotExist:
+            return None
 
 class StatusView(APIView):
     """

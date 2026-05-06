@@ -350,21 +350,33 @@ class TestCheckoutView(APITestCase):
         self.repo = Repository.objects.create(name='my-repo', path='/some/path')
 
     @patch('bvcs.views.BVCSClient')
-    def test_checkout_success(self, MockClient):
+    @patch('bvcs.views.mimetypes.guess_type', return_value=('audio/wav', None))
+    def test_checkout_success(self, mock_guess, MockClient):
         mock_instance = MockClient.return_value
         mock_instance.checkout.return_value = None
         valid_hash = 'a' * 64
-        response = self.client.get(f'/api/repos/{self.repo.id}/checkout/{valid_hash}/')
+
+        with patch('bvcs.views.Path.exists', return_value=True), \
+            patch('bvcs.views.Path.unlink'), \
+            patch('builtins.open', unittest.mock.mock_open(read_data=b'audio data')):
+            response = self.client.get(f'/api/repos/{self.repo.id}/checkout/{valid_hash}/')
+
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertIn('output_path', response.data)
+        self.assertEqual(response['Content-Disposition'], f'attachment; filename="checkout_aaaaaaaa"')
 
     @patch('bvcs.views.BVCSClient')
-    def test_checkout_bvcs_error(self, MockClient):
+    @patch('bvcs.views.mimetypes.guess_type', return_value=('audio/wav', None))
+    def test_checkout_valid_hash_accepted(self, mock_guess, MockClient):
         mock_instance = MockClient.return_value
-        mock_instance.checkout.side_effect = BVCSError('checkout failed')
+        mock_instance.checkout.return_value = None
         valid_hash = 'a' * 64
-        response = self.client.get(f'/api/repos/{self.repo.id}/checkout/{valid_hash}/')
-        self.assertEqual(response.status_code, status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+        with patch('bvcs.views.Path.exists', return_value=True), \
+            patch('bvcs.views.Path.unlink'), \
+            patch('builtins.open', unittest.mock.mock_open(read_data=b'audio data')):
+            response = self.client.get(f'/api/repos/{self.repo.id}/checkout/{valid_hash}/')
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
 
     def test_checkout_nonexistent_repo(self):
         response = self.client.get('/api/repos/99999/checkout/abc123/')
@@ -380,14 +392,6 @@ class TestCheckoutView(APITestCase):
         response = self.client.get(f'/api/repos/{self.repo.id}/checkout/{invalid_hash}/')
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIn('error', response.data)
-
-    @patch('bvcs.views.BVCSClient')
-    def test_checkout_valid_hash_accepted(self, MockClient):
-        mock_instance = MockClient.return_value
-        mock_instance.checkout.return_value = None
-        valid_hash = 'a' * 64
-        response = self.client.get(f'/api/repos/{self.repo.id}/checkout/{valid_hash}/')
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
 
 # Repository name validation tests 
 
