@@ -13,6 +13,11 @@ from .client import BVCSClient, BVCSError
 
 import re
 
+ALLOWED_EXTENSIONS = {'.wav', '.als', '.flp'}
+
+def is_valid_sha256(hash_string: str) -> bool:
+    return bool(re.fullmatch(r'[a-fA-F0-9]{64}', hash_string))
+
 class RepositoryListView(APIView):
     """
     GET  /api/repos/  — list all repositories
@@ -176,6 +181,13 @@ class StageFileView(APIView):
         if uploaded_file.size > max_size:
             return Response(
                 {"error": f"File too large. Maximum size is 500MB."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        ext = Path(uploaded_file.name).suffix.lower()
+        if ext not in ALLOWED_EXTENSIONS:
+            return Response(
+                {"error": f"Unsupported file type '{ext}'. Allowed types: {', '.join(ALLOWED_EXTENSIONS)}."},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 

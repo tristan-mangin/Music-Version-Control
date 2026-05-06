@@ -307,6 +307,43 @@ class TestStageFileView(APITestCase):
 
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIn('error', response.data)
+    
+    def test_stage_file_invalid_extension_rejected(self):
+        from django.core.files.uploadedfile import SimpleUploadedFile
+        bad_file = SimpleUploadedFile('notes.txt', b'some text', content_type='text/plain')
+        response = self.client.post(
+            f'/api/repos/{self.repo.id}/add/',
+            {'file': bad_file},
+            format='multipart'
+        )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('error', response.data)
+
+    def test_stage_file_valid_extensions_accepted(self):
+        from django.core.files.uploadedfile import SimpleUploadedFile
+        from bvcs.views import StageFileView
+
+        for ext in ['.wav', '.als', '.flp']:
+            mock_file = MagicMock()
+            mock_file.name = f'test{ext}'
+            mock_file.size = 100
+
+            mock_request = MagicMock()
+            mock_request.FILES = {'file': mock_file}
+
+            mock_repo = MagicMock()
+            mock_repo.path = '/some/path'
+
+            view = StageFileView()
+
+            with patch.object(view, 'get_repo', return_value=mock_repo), \
+                patch('builtins.open', unittest.mock.mock_open()), \
+                patch('bvcs.views.BVCSClient') as MockClient:
+                mock_instance = MockClient.return_value
+                mock_instance.add.return_value = None
+                response = view.post(mock_request, repo_id=self.repo.id)
+
+            self.assertEqual(response.status_code, status.HTTP_200_OK, f"Failed for extension {ext}")
 
 class TestCheckoutView(APITestCase):
     def setUp(self):
